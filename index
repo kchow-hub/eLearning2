@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SRCC 統測魔鬼訓練 - 選擇+填充全攻略</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #e67e22; --success: #27ae60; --error: #e74c3c; --bg: #fdfefe; }
+        body { font-family: "PingFang TC", sans-serif; background: var(--bg); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        #game-container { width: 95%; max-width: 700px; background: white; margin-top: 15px; padding: 25px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 2px solid #eee; }
+        .stats { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 20px; color: var(--primary); }
+        .q-box { background: #fffcf5; border: 2px dashed #f39c12; padding: 25px; border-radius: 20px; margin-bottom: 25px; text-align: center; }
+        .q-text { font-size: 1.4rem; line-height: 1.6; color: #333; }
+        .fill-blank { color: #e67e22; font-weight: bold; text-decoration: underline; padding: 0 10px; }
+        .speaker-btn { font-size: 2.2rem; background: none; border: none; cursor: pointer; color: var(--accent); }
+        .options-grid { display: grid; gap: 15px; }
+        .opt-btn { padding: 20px; font-size: 1.2rem; border: 2px solid #eee; border-radius: 15px; background: white; cursor: pointer; transition: 0.2s; }
+        .opt-btn:active { background: #f0f0f0; }
+        .correct { background: var(--success) !important; color: white; border-color: var(--success); }
+        .wrong { background: var(--error) !important; color: white; border-color: var(--error); }
+        #feedback { margin-top: 20px; padding: 20px; border-radius: 15px; display: none; line-height: 1.5; font-size: 1.1rem; }
+        .nav-btn { width: 100%; padding: 20px; margin-top: 25px; border-radius: 40px; border: none; background: var(--primary); color: white; font-size: 1.3rem; font-weight: bold; display: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="header-info" style="text-align:center">
+        <h2 style="color:var(--accent)">SRCC 統測複習：選擇 + 填充</h2>
+        <p>涵蓋筆記所有<span style="color:red">紅色重點</span>與歷屆考點</p>
+    </div>
+
+    <div id="game-content">
+        <div class="stats">
+            <span id="prog-text">進度：0 / 0</span>
+            <span id="rem-text">剩餘：0 題</span>
+        </div>
+
+        <div class="q-box">
+            <button class="speaker-btn" onclick="speak()">🔊</button>
+            <div id="q-text" class="q-text">準備開始...</div>
+        </div>
+
+        <div id="options" class="options-grid"></div>
+        <div id="feedback"></div>
+        <button id="next-btn" class="nav-btn" onclick="nextQuestion()">下一題</button>
+        <button id="start-btn" class="nav-btn" style="display:block" onclick="startGame()">開始全範圍測試</button>
+    </div>
+</div>
+
+<script>
+const masterQuiz = [
+    // --- 第一部分：歷屆選擇題 (保留原有) ---
+    { type: "choice", q: "「方略」在文中的意思是什麼？", a: ["計謀、策略", "前進的方向", "簡單的法律"], c: 0, h: "【2022真題】方略指計謀或策劃的方法。" },
+    { type: "choice", q: "「滿望」的意思是什麼？", a: ["一心希望", "非常失望", "充滿絕望"], c: 0, h: "【2023真題】滿望指一門心思地希望。" },
+    { type: "choice", q: "「這隻青蛙沉沉一睡，就是兩百多萬年」運用了什麼說明手法？", a: ["舉例說明", "比喻說明", "數據說明"], c: 0, h: "【2022真題】以青蛙的例子來說明生命力的頑強。" },
+    
+    // --- 第二部分：紅色重點填充題 (Section 2) ---
+    { type: "fill", q: "本文寫作者記憶中的北平風雪，抒發了作者對北平的（　　）。", a: ["懷念和留戀", "恐懼和厭惡", "孤獨與淒涼"], c: 0, h: "【紅字重點】這是全文的主旨核心。" },
+    { type: "fill", q: "第2段記述作者與大風搏鬥的情景，突出北平的風（　　）。", a: ["猛烈", "溫柔", "寒冷"], c: 0, h: "【紅字重點】第2段關鍵詞：記述風的猛烈。" },
+    { type: "fill", q: "第3段記述雪下滿院子，作用是從描寫大風（　　）至描寫大雪。", a: ["過渡", "總結", "開頭"], c: 0, h: "【紅字重點】第3段在結構上起過渡作用。" },
+    { type: "fill", q: "「風聲如虎吼」運用了（　　）修辭手法。", a: ["比喻", "擬人", "誇張"], c: 0, h: "【紅字重點】明喻（比喻）是此句考點。" },
+    { type: "fill", q: "「走上三步便倒退兩步」屬於（　　）描寫手法。", a: ["側面", "直接", "外貌"], c: 0, h: "【紅字重點】透過人的動作反應風力，為側面描寫。" },
+    { type: "fill", q: "作者運用（　　）的對比，突出北平風雪景象變化萬千。", a: ["一動一靜", "一黑一白", "一冷一熱"], c: 0, h: "【紅字重點】風（動）與雪（靜）的對比。" },
+    { type: "fill", q: "形容雪後大地潔白可愛、像人工雕琢般的成語是（　　）。", a: ["粉妝玉琢", "飛沙走石", "熙來攘往"], c: 0, h: "【紅字重點】必考成語：粉妝玉琢。" },
+    { type: "fill", q: "《生物的「睡眠」》一文的說明順序是（　　）。", a: ["邏輯順序", "時間順序", "空間順序"], c: 0, h: "【紅字重點】說明文常用的邏輯順序。" },
+    { type: "fill", q: "說明性文字的最主要特點是（　　）和客觀性。", a: ["科學性", "趣味性", "虛構性"], c: 0, h: "【紅字重點】說明文核心特點：科學性。" },
+    { type: "fill", q: "「海參要睡四五個月」運用了（　　）說明手法。", a: ["數據說明", "舉例說明", "打比方"], c: 0, h: "【紅字重點】數字出現即為數據說明。" },
+    { type: "fill", q: "「打哈欠代表了一種無意識的心智模仿」，這屬於（　　）說明。", a: ["定義說明", "分類說明", "比較說明"], c: 0, h: "【紅字重點】為現象下定義。" },
+    { type: "fill", q: "作者寫北平風雪是為了表達對（　　）的思念。", a: ["故地", "朋友", "美食"], c: 0, h: "【紅字重點】對故地（北平）的懷念。" },
+    { type: "fill", q: "「天地空無一點塵」展現的是雪後的（　　）美。", a: ["靜態", "動態", "壯闊"], c: 0, h: "【紅字重點】雪後的寧靜美。" },
+    { type: "fill", q: "（　　）說明是指舉出具體事例來解釋事物。", a: ["舉例", "數據", "引用"], c: 0, h: "【紅字重點】說明方法定義：舉例說明。" },
+    { type: "fill", q: "「月亮這晚分外（　　）」是形容雪夜月光。", a: ["皎潔", "明亮", "通紅"], c: 0, h: "【紅字重點】課文原詞：皎潔。" }
+];
+
+let questions = [], currentIdx = 0, canAnswer = true;
+
+function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
+
+function speak() {
+    let text = document.getElementById('q-text').innerText;
+    text = text.replace("（　　）", "括號");
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.lang = 'zh-HK';
+    window.speechSynthesis.speak(msg);
+}
+
+function startGame() {
+    document.getElementById('start-btn').style.display = 'none';
+    questions = shuffle([...masterQuiz]);
+    currentIdx = 0;
+    loadQuestion();
+}
+
+function loadQuestion() {
+    canAnswer = true;
+    const q = questions[currentIdx];
+    document.getElementById('prog-text').innerText = `已完成：${currentIdx} / ${questions.length}`;
+    document.getElementById('rem-text').innerText = `餘下：${questions.length - currentIdx} 題`;
+    
+    // 處理填充題顯示
+    if(q.type === "fill") {
+        document.getElementById('q-text').innerHTML = `請填充：<br>${q.q.replace("（　　）", "<span class='fill-blank'>？</span>")}`;
+    } else {
+        document.getElementById('q-text').innerText = q.q;
+    }
+    
+    document.getElementById('feedback').style.display = 'none';
+    document.getElementById('next-btn').style.display = 'none';
+    
+    const optsDiv = document.getElementById('options');
+    optsDiv.innerHTML = '';
+    
+    let opts = q.a.map((t, i) => ({t, i}));
+    shuffle(opts).forEach(o => {
+        const btn = document.createElement('button');
+        btn.className = 'opt-btn';
+        btn.innerText = o.t;
+        btn.onclick = () => check(o.i, btn);
+        optsDiv.appendChild(btn);
+    });
+    
+    setTimeout(speak, 500);
+}
+
+function check(idx, btn) {
+    if (!canAnswer) return;
+    canAnswer = false;
+    
+    const q = questions[currentIdx];
+    const correctIdx = q.c;
+    const fb = document.getElementById('feedback');
+    fb.style.display = 'block';
+    
+    if (idx === correctIdx) {
+        btn.classList.add('correct');
+        fb.style.backgroundColor = "#e8f5e9";
+        fb.style.color = "#2e7d32";
+        fb.innerHTML = "<b>🎯 正確！</b><br>" + q.h;
+        if(q.type === "fill") {
+            document.querySelector('.fill-blank').innerText = q.a[idx];
+            document.querySelector('.fill-blank').style.color = "var(--success)";
+        }
+    } else {
+        btn.classList.add('wrong');
+        fb.style.backgroundColor = "#ffebee";
+        fb.style.color = "#c62828";
+        fb.innerHTML = `<b>❌ 錯誤！</b><br>應填入：<b>${q.a[correctIdx]}</b><br><small>${q.h}</small>`;
+        document.querySelectorAll('.opt-btn').forEach(b => {
+            if (b.innerText === q.a[correctIdx]) b.classList.add('correct');
+        });
+    }
+    document.getElementById('next-btn').style.display = 'block';
+}
+
+function nextQuestion() {
+    currentIdx++;
+    if (currentIdx < questions.length) {
+        loadQuestion();
+    } else {
+        document.getElementById('q-text').innerHTML = "<h2 style='color:var(--success)'>🎊 恭喜完成！</h2><p>你已精通所有紅字重點與歷屆考題。</p>";
+        document.getElementById('options').innerHTML = "";
+        document.getElementById('feedback').style.display = 'none';
+        document.getElementById('next-btn').style.display = 'none';
+        document.getElementById('start-btn').innerText = "再測一次";
+        document.getElementById('start-btn').style.display = 'block';
+    }
+}
+</script>
+</body>
+</html>
